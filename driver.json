@@ -1,0 +1,7 @@
+{
+  "name": "granville-llama",
+  "version": "0.1.0",
+  "description": "llama.cpp backend for GGUF model inference",
+  "platform": "",
+  "lib_name": "libgranville_llama"
+}

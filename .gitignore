@@ -1,0 +1,21 @@
+# Zig build artifacts
+zig-out/
+.zig-cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies (submodule or downloaded)
+vendor/llama.cpp/
+
+# Shared libraries
+*.dylib
+*.so
+*.dll
