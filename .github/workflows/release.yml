@@ -39,7 +39,7 @@ jobs:
       - name: Build llama.cpp
         run: |
           cd vendor/llama.cpp
-          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j$(nproc || sysctl -n hw.ncpu)
 
       - name: Build driver
