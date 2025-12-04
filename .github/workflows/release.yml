@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x86_64
+            lib_ext: .so
+          - os: macos-latest
+            platform: darwin-arm64
+            lib_ext: .dylib
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Zig
+        uses: goto-bus-stop/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Install CMake
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            sudo apt-get update && sudo apt-get install -y cmake
+          fi
+
+      - name: Build llama.cpp
+        run: |
+          cd vendor/llama.cpp
+          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j$(nproc || sysctl -n hw.ncpu)
+
+      - name: Build driver
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Create tarball
+        run: |
+          mkdir -p dist/granville-llama
+          cp zig-out/lib/libgranville_llama${{ matrix.lib_ext }} dist/granville-llama/
+          cp driver.json dist/granville-llama/
+          cd dist
+          tar -czvf granville-llama-${{ matrix.platform }}.tar.gz granville-llama/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: granville-llama-${{ matrix.platform }}
+          path: dist/granville-llama-${{ matrix.platform }}.tar.gz
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
