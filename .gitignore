@@ -12,8 +12,8 @@ zig-out/
 .DS_Store
 Thumbs.db
 
-# Dependencies (submodule or downloaded)
-vendor/llama.cpp/
+# Dependencies build artifacts (submodule itself is tracked)
+vendor/llama.cpp/build/
 
 # Shared libraries
 *.dylib
