@@ -20,9 +20,13 @@ pub fn build(b: *std.Build) void {
 
     // Link against llama.cpp libraries
     // These are built separately via CMake
+    // On Windows with MSVC, CMake outputs to build/bin/Release/
     const llama_lib_path = "vendor/llama.cpp/build/bin";
+    const llama_lib_path_win = "vendor/llama.cpp/build/bin/Release";
     lib.addLibraryPath(b.path(llama_lib_path));
+    lib.addLibraryPath(b.path(llama_lib_path_win));
     lib.addRPath(b.path(llama_lib_path));
+    lib.addRPath(b.path(llama_lib_path_win));
 
     // Link the required libraries
     lib.linkSystemLibrary("llama");
