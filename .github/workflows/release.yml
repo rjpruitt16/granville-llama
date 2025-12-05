@@ -70,7 +70,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           mkdir -p dist/granville-llama
-          cp zig-out/lib/granville_llama${{ matrix.lib_ext }} dist/granville-llama/
+          cp zig-out/bin/granville_llama${{ matrix.lib_ext }} dist/granville-llama/
           cp driver.json dist/granville-llama/
           cd dist
           tar -czvf granville-llama-${{ matrix.platform }}.tar.gz granville-llama/
