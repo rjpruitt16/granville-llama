@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build ${{ matrix.platform }}
@@ -19,6 +22,9 @@ jobs:
           - os: macos-latest
             platform: darwin-arm64
             lib_ext: .dylib
+          - os: windows-latest
+            platform: windows-x86_64
+            lib_ext: .dll
 
     steps:
       - uses: actions/checkout@v4
@@ -30,28 +36,45 @@ jobs:
         with:
           version: 0.15.2
 
-      - name: Install CMake
-        run: |
-          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-            sudo apt-get update && sudo apt-get install -y cmake
-          fi
+      - name: Install CMake (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y cmake
 
-      - name: Build llama.cpp
+      - name: Build llama.cpp (Unix)
+        if: matrix.os != 'windows-latest'
         run: |
           cd vendor/llama.cpp
           cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j$(nproc || sysctl -n hw.ncpu)
 
+      - name: Build llama.cpp (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd vendor/llama.cpp
+          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS
+
       - name: Build driver
         run: zig build -Doptimize=ReleaseFast
 
-      - name: Create tarball
+      - name: Create tarball (Unix)
+        if: matrix.os != 'windows-latest'
         run: |
           mkdir -p dist/granville-llama
           cp zig-out/lib/libgranville_llama${{ matrix.lib_ext }} dist/granville-llama/
           cp driver.json dist/granville-llama/
           cd dist
           tar -czvf granville-llama-${{ matrix.platform }}.tar.gz granville-llama/
+
+      - name: Create tarball (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir -p dist/granville-llama
+          cp zig-out/lib/granville_llama${{ matrix.lib_ext }} dist/granville-llama/
+          cp driver.json dist/granville-llama/
+          cd dist
+          tar -czvf granville-llama-${{ matrix.platform }}.tar.gz granville-llama/
+        shell: bash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
