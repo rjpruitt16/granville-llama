@@ -18,6 +18,13 @@ const c = @cImport({
 const VERSION = "0.1.0";
 const NAME = "granville-llama";
 
+// Cross-platform getenv helper that returns default on error or missing
+fn getEnvInt(comptime T: type, name: []const u8, default: T) T {
+    const value = std.process.getEnvVarOwned(std.heap.c_allocator, name) catch return default;
+    defer std.heap.c_allocator.free(value);
+    return std.fmt.parseInt(T, value, 10) catch default;
+}
+
 // ============================================================================
 // Driver Context
 // ============================================================================
@@ -29,27 +36,11 @@ const DriverContext = struct {
     n_ctx: u32,
 
     fn init() DriverContext {
-        // Read config from environment
-        const threads = blk: {
-            if (std.posix.getenv("GRANVILLE_LLAMA_THREADS")) |t| {
-                break :blk std.fmt.parseInt(i32, t, 10) catch 4;
-            }
-            break :blk @as(i32, @intCast(std.Thread.getCpuCount() catch 4));
-        };
-
-        const gpu_layers = blk: {
-            if (std.posix.getenv("GRANVILLE_LLAMA_GPU_LAYERS")) |g| {
-                break :blk std.fmt.parseInt(i32, g, 10) catch 0;
-            }
-            break :blk @as(i32, 0);
-        };
-
-        const ctx_size = blk: {
-            if (std.posix.getenv("GRANVILLE_LLAMA_CONTEXT")) |ctx| {
-                break :blk std.fmt.parseInt(u32, ctx, 10) catch 2048;
-            }
-            break :blk @as(u32, 2048);
-        };
+        // Read config from environment (cross-platform)
+        const default_threads: i32 = @intCast(std.Thread.getCpuCount() catch 4);
+        const threads = getEnvInt(i32, "GRANVILLE_LLAMA_THREADS", default_threads);
+        const gpu_layers = getEnvInt(i32, "GRANVILLE_LLAMA_GPU_LAYERS", 0);
+        const ctx_size = getEnvInt(u32, "GRANVILLE_LLAMA_CONTEXT", 2048);
 
         return DriverContext{
             .allocator = std.heap.c_allocator,
