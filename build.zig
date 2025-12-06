@@ -51,7 +51,12 @@ pub fn build(b: *std.Build) void {
     }
 
     // Link C++ runtime
+    // We need both: libc++ (from Zig's clang) and libstdc++ (used by llama.cpp built with g++)
     lib.linkLibCpp();
+    // Also link libstdc++ since llama.cpp was built with g++ and uses its ABI
+    if (target.result.os.tag == .linux) {
+        lib.linkSystemLibrary("stdc++");
+    }
 
     // Add include paths for llama.cpp headers
     lib.addIncludePath(b.path("vendor/llama.cpp/include"));
