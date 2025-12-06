@@ -20,22 +20,26 @@ pub fn build(b: *std.Build) void {
 
     // Link against llama.cpp static libraries
     // These are built separately via CMake with -DBUILD_SHARED_LIBS=OFF
-    // Static libs go to build/src and build/ggml/src
+    // Static libs are spread across several directories
     lib.addLibraryPath(b.path("vendor/llama.cpp/build/src"));
     lib.addLibraryPath(b.path("vendor/llama.cpp/build/ggml/src"));
+    lib.addLibraryPath(b.path("vendor/llama.cpp/build/ggml/src/ggml-metal")); // Metal backend
+    lib.addLibraryPath(b.path("vendor/llama.cpp/build/ggml/src/ggml-blas")); // BLAS backend
     // Also check bin directories for dynamic libs (fallback/Windows)
     lib.addLibraryPath(b.path("vendor/llama.cpp/build/bin"));
     lib.addLibraryPath(b.path("vendor/llama.cpp/build/bin/Release"));
 
     // Link the required libraries (static)
+    // Order matters - dependent libs must come after their dependencies
     lib.linkSystemLibrary("llama");
     lib.linkSystemLibrary("ggml");
     lib.linkSystemLibrary("ggml-base");
     lib.linkSystemLibrary("ggml-cpu");
 
-    // On macOS, link Metal
+    // On macOS, link Metal and BLAS backends
     if (target.result.os.tag == .macos) {
         lib.linkSystemLibrary("ggml-metal");
+        lib.linkSystemLibrary("ggml-blas");
         lib.linkFramework("Foundation");
         lib.linkFramework("Metal");
         lib.linkFramework("MetalKit");
