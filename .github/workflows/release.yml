@@ -54,6 +54,15 @@ jobs:
           cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release -j $env:NUMBER_OF_PROCESSORS
 
+      - name: Debug library locations (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          echo "=== Looking for .lib files ==="
+          Get-ChildItem -Path vendor/llama.cpp/build -Recurse -Filter "*.lib" | Select-Object FullName
+          echo "=== Looking for .a files ==="
+          Get-ChildItem -Path vendor/llama.cpp/build -Recurse -Filter "*.a" | Select-Object FullName
+        shell: pwsh
+
       - name: Build driver
         run: zig build -Doptimize=ReleaseFast
 
