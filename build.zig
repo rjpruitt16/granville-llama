@@ -18,17 +18,16 @@ pub fn build(b: *std.Build) void {
         .root_module = root_module,
     });
 
-    // Link against llama.cpp libraries
-    // These are built separately via CMake
-    // On Windows with MSVC, CMake outputs to build/bin/Release/
-    const llama_lib_path = "vendor/llama.cpp/build/bin";
-    const llama_lib_path_win = "vendor/llama.cpp/build/bin/Release";
-    lib.addLibraryPath(b.path(llama_lib_path));
-    lib.addLibraryPath(b.path(llama_lib_path_win));
-    lib.addRPath(b.path(llama_lib_path));
-    lib.addRPath(b.path(llama_lib_path_win));
+    // Link against llama.cpp static libraries
+    // These are built separately via CMake with -DBUILD_SHARED_LIBS=OFF
+    // Static libs go to build/src and build/ggml/src
+    lib.addLibraryPath(b.path("vendor/llama.cpp/build/src"));
+    lib.addLibraryPath(b.path("vendor/llama.cpp/build/ggml/src"));
+    // Also check bin directories for dynamic libs (fallback/Windows)
+    lib.addLibraryPath(b.path("vendor/llama.cpp/build/bin"));
+    lib.addLibraryPath(b.path("vendor/llama.cpp/build/bin/Release"));
 
-    // Link the required libraries
+    // Link the required libraries (static)
     lib.linkSystemLibrary("llama");
     lib.linkSystemLibrary("ggml");
     lib.linkSystemLibrary("ggml-base");
