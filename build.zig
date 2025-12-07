@@ -52,13 +52,10 @@ pub fn build(b: *std.Build) void {
 
     // Link C++ runtime
     // llama.cpp is built with g++ which uses libstdc++
-    // We must link libstdc++ to resolve C++ ABI symbols
+    // Force static linking of libstdc++ to resolve all C++ ABI symbols
     lib.linkLibCpp();
-
-    // On Linux, explicitly link libstdc++ for g++-compiled llama.cpp
-    // Using root_module to ensure it's actually linked into the binary
     if (target.result.os.tag == .linux) {
-        root_module.linkSystemLibrary("stdc++", .{});
+        lib.addObjectFile(.{ .cwd_relative = "/usr/lib/gcc/x86_64-linux-gnu/11/libstdc++.a" });
     }
 
     // Add include paths for llama.cpp headers
