@@ -24,10 +24,11 @@ jobs:
           - os: macos-latest
             platform: darwin-arm64
             lib_ext: .dylib
-          - os: windows-latest
-            platform: windows-x86_64
-            lib_ext: .dll
-            experimental: true  # Windows build is optional (see issue #1)
+          # Windows disabled until cross-compilation is implemented
+          # See: https://github.com/rjpruitt16/granville-llama/issues/1
+          # - os: windows-latest
+          #   platform: windows-x86_64
+          #   lib_ext: .dll
 
     steps:
       - uses: actions/checkout@v4
