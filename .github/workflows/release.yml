@@ -43,12 +43,19 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update && sudo apt-get install -y cmake
 
-      - name: Build llama.cpp (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Build llama.cpp (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           cd vendor/llama.cpp
           CC="zig cc" CXX="zig c++" cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
-          cmake --build build -j$(nproc || sysctl -n hw.ncpu)
+          cmake --build build -j$(nproc)
+
+      - name: Build llama.cpp (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd vendor/llama.cpp
+          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Build llama.cpp (Windows)
         if: matrix.os == 'windows-latest'
