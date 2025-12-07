@@ -47,7 +47,7 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           cd vendor/llama.cpp
-          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          CC="zig cc" CXX="zig c++" cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
           cmake --build build -j$(nproc || sysctl -n hw.ncpu)
 
       - name: Build llama.cpp (Windows)

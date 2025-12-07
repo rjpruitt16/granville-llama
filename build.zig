@@ -50,13 +50,9 @@ pub fn build(b: *std.Build) void {
         lib.linkFramework("Accelerate");
     }
 
-    // Link C++ runtime
-    // llama.cpp is built with g++ which uses libstdc++
-    // Force static linking of libstdc++ to resolve all C++ ABI symbols
+    // Link C++ runtime (libc++)
+    // llama.cpp is now built with zig c++ so everything uses libc++
     lib.linkLibCpp();
-    if (target.result.os.tag == .linux) {
-        lib.addObjectFile(.{ .cwd_relative = "/usr/lib/gcc/x86_64-linux-gnu/11/libstdc++.a" });
-    }
 
     // Add include paths for llama.cpp headers
     lib.addIncludePath(b.path("vendor/llama.cpp/include"));
