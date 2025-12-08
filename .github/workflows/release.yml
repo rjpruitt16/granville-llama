@@ -55,7 +55,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           cd vendor/llama.cpp
-          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
           cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Build llama.cpp (Windows)
