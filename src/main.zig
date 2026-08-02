@@ -164,21 +164,63 @@ export fn granville_driver_unload_model(ctx_ptr: ?*anyopaque, model_ptr: ?*anyop
     }
 }
 
+/// Called once per generated token when streaming (see generateImpl below).
+/// `piece` is only valid for the duration of the call -- the caller must
+/// copy it if it needs to outlive the callback.
+pub const TokenCallback = *const fn (?*anyopaque, [*:0]const u8) callconv(.c) void;
+
 /// Generate text from prompt
+/// @param reset_cache: if true, clear KV cache before inference (for independent requests)
 export fn granville_driver_generate(
     ctx_ptr: ?*anyopaque,
     model_ptr: ?*anyopaque,
     prompt: [*:0]const u8,
     max_tokens: u32,
+    reset_cache: bool,
 ) [*:0]const u8 {
     _ = ctx_ptr;
+    return generateImpl(model_ptr, prompt, max_tokens, reset_cache, null, null);
+}
 
+/// Same as granville_driver_generate, but calls on_token once per generated
+/// token as it's produced (not buffered until the end) -- still returns the
+/// full accumulated text too, same as the non-streaming call, so callers
+/// that don't pass on_token get identical behavior either way.
+export fn granville_driver_generate_stream(
+    ctx_ptr: ?*anyopaque,
+    model_ptr: ?*anyopaque,
+    prompt: [*:0]const u8,
+    max_tokens: u32,
+    reset_cache: bool,
+    on_token: TokenCallback,
+    userdata: ?*anyopaque,
+) [*:0]const u8 {
+    _ = ctx_ptr;
+    return generateImpl(model_ptr, prompt, max_tokens, reset_cache, on_token, userdata);
+}
+
+fn generateImpl(
+    model_ptr: ?*anyopaque,
+    prompt: [*:0]const u8,
+    max_tokens: u32,
+    reset_cache: bool,
+    on_token: ?TokenCallback,
+    userdata: ?*anyopaque,
+) [*:0]const u8 {
     const handle: *ModelHandle = if (model_ptr) |ptr|
         @ptrCast(@alignCast(ptr))
     else
         return allocErrorString("model not loaded");
 
     const prompt_slice = std.mem.span(prompt);
+
+    // Clear KV cache before inference if requested (default for independent requests)
+    if (reset_cache) {
+        const mem = c.llama_get_memory(handle.ctx);
+        if (mem != null) {
+            c.llama_memory_clear(mem, true); // true = also clear data buffers
+        }
+    }
 
     // Tokenize the prompt
     var tokens: [4096]c.llama_token = undefined;
@@ -248,6 +290,15 @@ export fn granville_driver_generate(
         output_tokens.append(std.heap.c_allocator, new_token) catch break;
         generated_count += 1;
 
+        if (on_token) |callback| {
+            var piece_buf: [256:0]u8 = undefined;
+            const n = c.llama_token_to_piece(handle.vocab, new_token, &piece_buf, piece_buf.len, 0, true);
+            if (n > 0) {
+                piece_buf[@intCast(n)] = 0;
+                callback(userdata, &piece_buf);
+            }
+        }
+
         // Prepare batch for next token
         batch.n_tokens = 1;
         batch.token[0] = new_token;
@@ -294,7 +345,8 @@ pub const DriverVTable = extern struct {
     deinit: *const fn (?*anyopaque) callconv(.c) void,
     load_model: *const fn (?*anyopaque, [*:0]const u8) callconv(.c) ?*anyopaque,
     unload_model: *const fn (?*anyopaque, ?*anyopaque) callconv(.c) void,
-    generate: *const fn (?*anyopaque, ?*anyopaque, [*:0]const u8, u32) callconv(.c) [*:0]const u8,
+    generate: *const fn (?*anyopaque, ?*anyopaque, [*:0]const u8, u32, bool) callconv(.c) [*:0]const u8,
+    generate_stream: *const fn (?*anyopaque, ?*anyopaque, [*:0]const u8, u32, bool, TokenCallback, ?*anyopaque) callconv(.c) [*:0]const u8,
     free_string: *const fn ([*:0]const u8) callconv(.c) void,
     get_name: *const fn () callconv(.c) [*:0]const u8,
     get_version: *const fn () callconv(.c) [*:0]const u8,
@@ -306,6 +358,7 @@ export const granville_driver_vtable: DriverVTable = .{
     .load_model = granville_driver_load_model,
     .unload_model = granville_driver_unload_model,
     .generate = granville_driver_generate,
+    .generate_stream = granville_driver_generate_stream,
     .free_string = granville_driver_free_string,
     .get_name = granville_driver_get_name,
     .get_version = granville_driver_get_version,
