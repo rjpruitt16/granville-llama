@@ -52,7 +52,13 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           cd vendor/llama.cpp
-          CC="zig cc" CXX="zig c++" cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+          # GGML_NATIVE=OFF is deliberate: it defaults ON, which bakes in
+          # whatever instruction set the *build* machine happens to have
+          # (e.g. AVX-512 on this GitHub runner). This binary ships to
+          # unknown target hardware (Fly VMs, self-hosters' machines) --
+          # optimizing for the CI runner instead of a portable baseline
+          # caused a straight SIGILL crash at driver init on Fly.
+          CC="zig cc" CXX="zig c++" cmake -B build -DLLAMA_BUILD_EXAMPLES=OFF -DLLAMA_BUILD_TESTS=OFF -DLLAMA_CURL=OFF -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DGGML_NATIVE=OFF
           cmake --build build -j$(nproc)
 
       - name: Build llama.cpp (macOS)
